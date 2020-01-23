@@ -429,6 +429,33 @@ _C.AVA.GROUNDTRUTH_FILE = "ava_val_v2.2.csv"
 # Backend to process image, includes `pytorch` and `cv2`.
 _C.AVA.IMG_PROC_BACKEND = "cv2"
 
+# FCOS configs
+_C.FCOS.ENABLED = True
+_C.MODEL.FCOS.FPN_OUT_CHANNELS = 320
+_C.MODEL.FCOS.NUM_CLASSES = 81  # the number of classes including background
+_C.MODEL.FCOS.FPN_STRIDES = [4, 8, 16, 32]
+_C.MODEL.FCOS.PRIOR_PROB = 0.01
+_C.MODEL.FCOS.INFERENCE_TH = 0.05
+_C.MODEL.FCOS.NMS_TH = 0.6
+_C.MODEL.FCOS.PRE_NMS_TOP_N = 1000
+
+# Focal loss parameter: alpha
+_C.MODEL.FCOS.LOSS_ALPHA = 0.25
+# Focal loss parameter: gamma
+_C.MODEL.FCOS.LOSS_GAMMA = 2.0
+
+# the number of convolutions used in the cls and bbox tower
+_C.MODEL.FCOS.NUM_CONVS = 4
+
+# if CENTER_SAMPLING_RADIUS <= 0, it will disable center sampling
+_C.MODEL.FCOS.CENTER_SAMPLING_RADIUS = 0.0
+# IOU_LOSS_TYPE can be "iou", "linear_iou" or "giou"
+_C.MODEL.FCOS.IOU_LOSS_TYPE = "iou"
+
+_C.MODEL.FCOS.NORM_REG_TARGETS = False
+_C.MODEL.FCOS.CENTERNESS_ON_REG = False
+
+_C.MODEL.FCOS.USE_DCN_IN_TOWER = False
 
 def _assert_and_infer_cfg(cfg):
     # BN assertions.

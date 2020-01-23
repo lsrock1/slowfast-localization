@@ -7,7 +7,8 @@ import torch
 import torch.nn as nn
 
 import slowfast.utils.weight_init_helper as init_helper
-from slowfast.models import head_helper, resnet_helper, stem_helper
+from slowfast.models import head_helper, resnet_helper, stem_helper, fpn_helper
+from slowfast.models.fcos import fcos_helper
 
 # Number of blocks for different stages given the model depth.
 _MODEL_STAGE_DEPTH = {50: (3, 4, 6, 3), 101: (3, 4, 23, 3)}
@@ -142,6 +143,7 @@ class SlowFastModel(nn.Module):
         """
         super(SlowFastModel, self).__init__()
         self.enable_detection = cfg.DETECTION.ENABLE
+        self.enable_fcos = cfg.FCOS.ENABLE
         self.num_pathways = 2
         self._construct_network(cfg)
         init_helper.init_weights(
@@ -308,7 +310,13 @@ class SlowFastModel(nn.Module):
             dilation=cfg.RESNET.SPATIAL_DILATIONS[3],
         )
 
-        if cfg.DETECTION.ENABLE:
+        if cfg.FCOS.ENABLE:
+            self.fpn = fpn_helper.FPN([width_per_group * 4 // cfg.SLOWFAST.BETA_INV,
+                                       width_per_group * 8 // cfg.SLOWFAST.BETA_INV,
+                                       width_per_group * 16 // cfg.SLOWFAST.BETA_INV,
+                                       width_per_group * 32 // cfg.SLOWFAST.BETA_INV], cfg.FCOS.FPN_OUT_CHANNELS)
+            self.head = fcos_helper.build_fcos(cfg, cfg.FCOS.FPN_OUT_CHANNELS)
+        elif cfg.DETECTION.ENABLE:
             self.head = head_helper.ResNetRoIHead(
                 dim_in=[
                     width_per_group * 32,
@@ -356,19 +364,48 @@ class SlowFastModel(nn.Module):
             )
 
     def forward(self, x, bboxes=None):
+        results = []
         x = self.s1(x)
         x = self.s1_fuse(x)
         x = self.s2(x)
         x = self.s2_fuse(x)
+        
+        if self.enable_fcos:
+            # use only fused output
+            results.append(x[0])
+        
         for pathway in range(self.num_pathways):
             pool = getattr(self, "pathway{}_pool".format(pathway))
             x[pathway] = pool(x[pathway])
+        
         x = self.s3(x)
         x = self.s3_fuse(x)
+        
+        if self.enable_fcos:
+            # use only fused output
+            results.append(x[0])
+        
         x = self.s4(x)
         x = self.s4_fuse(x)
+        
+        if self.enable_fcos:
+            # use only fused output
+            results.append(x[0])
+        
         x = self.s5(x)
-        if self.enable_detection:
+
+        if self.enable_fcos:
+            # use only fused output
+            results.append(x[0])
+            del x
+            results = self.fpn(results)
+            boxes, losses = self.head(results)
+            del results
+            if self.training:
+                return losses
+            else:
+                return boxes
+        elif self.enable_detection:
             x = self.head(x, bboxes)
         else:
             x = self.head(x)
