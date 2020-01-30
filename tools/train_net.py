@@ -51,7 +51,10 @@ def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
         for key, val in meta.items():
             if isinstance(val, (list,)):
                 for i in range(len(val)):
-                    val[i] = val[i].cuda(non_blocking=True)
+                    if torch.is_tensor(val[i]):
+                        val[i] = val[i].cuda(non_blocking=True)
+                    else:
+                        val[i] = val[i].to('cuda')
             else:
                 meta[key] = val.cuda(non_blocking=True)
 
@@ -59,19 +62,28 @@ def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
         lr = optim.get_epoch_lr(cur_epoch + float(cur_iter) / data_size, cfg)
         optim.set_lr(optimizer, lr)
 
-        if cfg.DETECTION.ENABLE:
-            # Compute the predictions.
-            preds = model(inputs, meta["boxes"])
+        if cfg.FCOS.ENABLE:
+            loss_dict = model(inputs, meta["boxes"])
+            loss = sum(loss for loss in loss_dict.values())
+
+            # # reduce losses over all GPUs for logging purposes
+            # loss_dict_reduced = reduce_loss_dict(loss_dict)
+            # losses_reduced = sum(loss for loss in loss_dict_reduced.values())
 
         else:
-            # Perform the forward pass.
-            preds = model(inputs)
+            if cfg.DETECTION.ENABLE:
+                # Compute the predictions.
+                preds = model(inputs, meta["boxes"])
 
-        # Explicitly declare reduction to mean.
-        loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
+            else:
+                # Perform the forward pass.
+                preds = model(inputs)
 
-        # Compute the loss.
-        loss = loss_fun(preds, labels)
+            # Explicitly declare reduction to mean.
+            loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
+
+            # Compute the loss.
+            loss = loss_fun(preds, labels)
 
         # check Nan Loss.
         misc.check_nan_losses(loss)
@@ -81,8 +93,14 @@ def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
         loss.backward()
         # Update the parameters.
         optimizer.step()
+        if cfg.FCOS.ENABLE:
+            if cfg.NUM_GPUS > 1:
+                loss = du.all_reduce([loss])[0]
+            loss = loss.item()
+            print(f'step: {cur_iter} lr: ', lr, ' ', loss)
 
-        if cfg.DETECTION.ENABLE:
+            # train_meter.iter_toc()
+        elif cfg.DETECTION.ENABLE:
             if cfg.NUM_GPUS > 1:
                 loss = du.all_reduce([loss])[0]
             loss = loss.item()

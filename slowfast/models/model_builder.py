@@ -40,6 +40,6 @@ def build_model(cfg):
     if cfg.NUM_GPUS > 1:
         # Make model replica operate on the current device
         model = torch.nn.parallel.DistributedDataParallel(
-            module=model, device_ids=[cur_device], output_device=cur_device
+            module=model, device_ids=[cur_device], output_device=cur_device, find_unused_parameters=True
         )
     return model

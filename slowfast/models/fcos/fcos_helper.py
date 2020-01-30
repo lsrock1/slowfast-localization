@@ -93,7 +93,7 @@ class FCOSHead(torch.nn.Module):
         bias_value = -math.log((1 - prior_prob) / prior_prob)
         torch.nn.init.constant_(self.cls_logits.bias, bias_value)
 
-        self.scales = nn.ModuleList([Scale(init_value=1.0) for _ in range(5)])
+        self.scales = nn.ModuleList([Scale(init_value=1.0) for _ in range(4)])
 
     def forward(self, x):
         logits = []
@@ -132,15 +132,16 @@ class FCOSModule(torch.nn.Module):
 
         head = FCOSHead(cfg, in_channels)
 
-        box_selector_test = make_fcos_postprocessor(cfg)
+        box_selector_test = make_fcos_postprocessor(cfg['MODEL'])
 
         loss_evaluator = make_fcos_loss_evaluator(cfg)
         self.head = head
         self.box_selector_test = box_selector_test
         self.loss_evaluator = loss_evaluator
         self.fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
+        self.size = [cfg.DATA.TEST_CROP_SIZE, cfg.DATA.TEST_CROP_SIZE]
 
-    def forward(self, images, features, targets=None):
+    def forward(self, features, targets=None):
         """
         Arguments:
             images (ImageList): images for which we want to compute the predictions
@@ -156,7 +157,7 @@ class FCOSModule(torch.nn.Module):
         """
         box_cls, box_regression, centerness = self.head(features)
         locations = self.compute_locations(features)
- 
+
         if self.training:
             return self._forward_train(
                 locations, box_cls, 
@@ -166,7 +167,7 @@ class FCOSModule(torch.nn.Module):
         else:
             return self._forward_test(
                 locations, box_cls, box_regression, 
-                centerness, images.image_sizes
+                centerness, self.size
             )
 
     def _forward_train(self, locations, box_cls, box_regression, centerness, targets):
@@ -183,7 +184,7 @@ class FCOSModule(torch.nn.Module):
     def _forward_test(self, locations, box_cls, box_regression, centerness, image_sizes):
         boxes = self.box_selector_test(
             locations, box_cls, box_regression, 
-            centerness, image_sizes
+            centerness, self.size
         )
         return boxes, {}
 

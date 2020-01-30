@@ -430,10 +430,13 @@ _C.AVA.GROUNDTRUTH_FILE = "ava_val_v2.2.csv"
 _C.AVA.IMG_PROC_BACKEND = "cv2"
 
 # FCOS configs
-_C.FCOS.ENABLED = True
+_C.FCOS = CfgNode()
+_C.MODEL.FCOS = CfgNode()
+
+_C.FCOS.ENABLE = True
 _C.MODEL.FCOS.FPN_OUT_CHANNELS = 320
-_C.MODEL.FCOS.NUM_CLASSES = 81  # the number of classes including background
-_C.MODEL.FCOS.FPN_STRIDES = [4, 8, 16, 32]
+_C.MODEL.FCOS.NUM_CLASSES = 400  # the number of classes including background
+_C.MODEL.FCOS.FPN_STRIDES = [4, 8, 16, 16]
 _C.MODEL.FCOS.PRIOR_PROB = 0.01
 _C.MODEL.FCOS.INFERENCE_TH = 0.05
 _C.MODEL.FCOS.NMS_TH = 0.6

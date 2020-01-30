@@ -31,15 +31,18 @@ def detection_collate(batch):
     for key in extra_data[0].keys():
         data = [d[key] for d in extra_data]
         if key == "boxes" or key == "ori_boxes":
-            # Append idx info to the bboxes before concatenating them.
-            bboxes = [
-                np.concatenate(
-                    [np.full((data[i].shape[0], 1), float(i)), data[i]], axis=1
-                )
-                for i in range(len(data))
-            ]
-            bboxes = np.concatenate(bboxes, axis=0)
-            collated_extra_data[key] = torch.tensor(bboxes).float()
+            if not torch.is_tensor(data[0]) and not isinstance(data[0], np.ndarray):
+                collated_extra_data[key] = data
+            else:
+                # Append idx info to the bboxes before concatenating them.
+                bboxes = [
+                    np.concatenate(
+                        [np.full((data[i].shape[0], 1), float(i)), data[i]], axis=1
+                    )
+                    for i in range(len(data))
+                ]
+                bboxes = np.concatenate(bboxes, axis=0)
+                collated_extra_data[key] = torch.tensor(bboxes).float()
         elif key == "metadata":
             collated_extra_data[key] = torch.tensor(
                 list(itertools.chain(*data))
@@ -89,7 +92,7 @@ def construct_loader(cfg, split):
         num_workers=cfg.DATA_LOADER.NUM_WORKERS,
         pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
         drop_last=drop_last,
-        collate_fn=detection_collate if cfg.DETECTION.ENABLE else None,
+        collate_fn=detection_collate if cfg.DETECTION.ENABLE or cfg.FCOS.ENABLE else None,
     )
     return loader
 

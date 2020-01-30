@@ -311,11 +311,11 @@ class SlowFastModel(nn.Module):
         )
 
         if cfg.FCOS.ENABLE:
-            self.fpn = fpn_helper.FPN([width_per_group * 4 // cfg.SLOWFAST.BETA_INV,
-                                       width_per_group * 8 // cfg.SLOWFAST.BETA_INV,
-                                       width_per_group * 16 // cfg.SLOWFAST.BETA_INV,
-                                       width_per_group * 32 // cfg.SLOWFAST.BETA_INV], cfg.FCOS.FPN_OUT_CHANNELS)
-            self.head = fcos_helper.build_fcos(cfg, cfg.FCOS.FPN_OUT_CHANNELS)
+            self.fpn = fpn_helper.FPN([(width_per_group * 4 // cfg.SLOWFAST.BETA_INV) * cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO + (width_per_group * 4),
+                                       (width_per_group * 8 // cfg.SLOWFAST.BETA_INV) * cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO + (width_per_group * 8),
+                                       (width_per_group * 16 // cfg.SLOWFAST.BETA_INV) * cfg.SLOWFAST.FUSION_CONV_CHANNEL_RATIO + (width_per_group * 16),
+                                       width_per_group * 32], cfg.MODEL.FCOS.FPN_OUT_CHANNELS)
+            self.head = fcos_helper.build_fcos(cfg,  cfg.MODEL.FCOS.FPN_OUT_CHANNELS)
         elif cfg.DETECTION.ENABLE:
             self.head = head_helper.ResNetRoIHead(
                 dim_in=[
@@ -399,7 +399,7 @@ class SlowFastModel(nn.Module):
             results.append(x[0])
             del x
             results = self.fpn(results)
-            boxes, losses = self.head(results)
+            boxes, losses = self.head(results, bboxes)
             del results
             if self.training:
                 return losses

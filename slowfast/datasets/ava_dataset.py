@@ -10,6 +10,8 @@ from . import cv2_transform as cv2_transform
 from . import transform as transform
 from . import utils as utils
 
+from slowfast.structures.bounding_box import BoxList
+
 from .build import DATASET_REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -412,5 +414,12 @@ class Ava(torch.utils.data.Dataset):
             "ori_boxes": ori_boxes,
             "metadata": metadata,
         }
+
+        if self.cfg.FCOS.ENABLE:
+            boxlist = BoxList(extra_data["boxes"], (self._crop_size, self._crop_size))
+            classes = torch.tensor(labels).squeeze(1)
+            boxlist.add_field("labels", classes)
+            # boxlist = boxlist.clip_to_image(remove_empty=True)
+            extra_data["boxes"] = boxlist
 
         return imgs, label_arrs, idx, extra_data

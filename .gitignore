@@ -1,0 +1,6 @@
+*.pyc
+datasets/*
+slowfast/datasets/my_dataset.py
+mobilenet_helper.py
+build
+slowfast.egg-info

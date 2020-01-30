@@ -4,3 +4,4 @@
 from .ava_dataset import Ava  # noqa
 from .build import DATASET_REGISTRY, build_dataset  # noqa
 from .kinetics import Kinetics  # noqa
+from .my_dataset import My

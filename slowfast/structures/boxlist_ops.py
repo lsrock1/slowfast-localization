@@ -2,14 +2,12 @@
 import torch
 
 from slowfast.structures.bounding_box import BoxList
-from slowfast.models import _C
-
 
 from torchvision.ops import boxes as box_ops
 from torchvision.ops import nms  # BC-compat
 
 
-# def boxlist_nms(boxlist, iou_threshold):
+# def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="scores"):
 #     """
 #     Same as torchvision.ops.boxes.batched_nms, but safer.
 #     """
@@ -48,7 +46,7 @@ def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="scores"):
     boxlist = boxlist.convert("xyxy")
     boxes = boxlist.bbox
     score = boxlist.get_field(score_field)
-    keep = _C.nms(boxes, score, nms_thresh)
+    keep = nms(boxes, score, nms_thresh)
     if max_proposals > 0:
         keep = keep[: max_proposals]
     boxlist = boxlist[keep]

@@ -2,7 +2,7 @@ import torch
 from torch.nn import functional as F
 from torch import nn
 import os
-from fvcore.nn import sigmoid_focal_loss_star_jit
+from fvcore.nn import sigmoid_focal_loss_jit
 
 
 INF = 100000000
@@ -135,11 +135,10 @@ class FCOSLossComputation(object):
 
     def prepare_targets(self, points, targets):
         object_sizes_of_interest = [
-            [-1, 64],
-            [64, 128],
-            [128, 256],
-            [256, 512],
-            [512, INF],
+            [-1, 40],
+            [40, 80],
+            [80, 160],
+            [160, INF]
         ]
         expanded_object_sizes_of_interest = []
         for l, points_per_level in enumerate(points):
@@ -284,10 +283,13 @@ class FCOSLossComputation(object):
         # sync num_pos from all gpus
         total_num_pos = reduce_sum(pos_inds.new_tensor([pos_inds.numel()])).item()
         num_pos_avg_per_gpu = max(total_num_pos / float(num_gpus), 1.0)
+
+        class_target = torch.zeros_like(box_cls_flatten)
+        class_target[pos_inds, labels_flatten[pos_inds]] = 1
         
-        cls_loss = sigmoid_focal_loss_star_jit(
+        cls_loss = sigmoid_focal_loss_jit(
             box_cls_flatten,
-            labels_flatten.int()
+            class_target,
             alpha=self.focal_loss_alpha,
             gamma=self.focal_loss_gamma,
             reduction="sum",
