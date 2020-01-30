@@ -24,7 +24,7 @@ class FCOSHead(torch.nn.Module):
         """
         super(FCOSHead, self).__init__()
         # TODO: Implement the sigmoid version first.
-        num_classes = cfg.MODEL.FCOS.NUM_CLASSES - 1
+        num_classes = cfg.MODEL.NUM_CLASSES - 1
         self.fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
         self.norm_reg_targets = cfg.MODEL.FCOS.NORM_REG_TARGETS
         self.centerness_on_reg = cfg.MODEL.FCOS.CENTERNESS_ON_REG
@@ -50,7 +50,7 @@ class FCOSHead(torch.nn.Module):
                 )
             )
             cls_tower.append(nn.GroupNorm(32, in_channels))
-            cls_tower.append(nn.ReLU())
+            cls_tower.append(nn.ReLU(True))
             bbox_tower.append(
                 conv_func(
                     in_channels,
@@ -62,7 +62,7 @@ class FCOSHead(torch.nn.Module):
                 )
             )
             bbox_tower.append(nn.GroupNorm(32, in_channels))
-            bbox_tower.append(nn.ReLU())
+            bbox_tower.append(nn.ReLU(True))
 
         self.add_module('cls_tower', nn.Sequential(*cls_tower))
         self.add_module('bbox_tower', nn.Sequential(*bbox_tower))

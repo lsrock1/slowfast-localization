@@ -64,6 +64,7 @@ def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
 
         if cfg.FCOS.ENABLE:
             loss_dict = model(inputs, meta["boxes"])
+            print('centerness: ', loss_dict['loss_centerness'].item(), ' class: ', loss_dict['loss_cls'].item(), ' box reg: ', loss_dict['loss_reg'].item())
             loss = sum(loss for loss in loss_dict.values())
 
             # # reduce losses over all GPUs for logging purposes
@@ -100,46 +101,47 @@ def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
             print(f'step: {cur_iter} lr: ', lr, ' ', loss)
 
             # train_meter.iter_toc()
-        elif cfg.DETECTION.ENABLE:
-            if cfg.NUM_GPUS > 1:
-                loss = du.all_reduce([loss])[0]
-            loss = loss.item()
-
-            train_meter.iter_toc()
-            # Update and log stats.
-            train_meter.update_stats(None, None, None, loss, lr)
         else:
-            # Compute the errors.
-            num_topks_correct = metrics.topks_correct(preds, labels, (1, 5))
-            top1_err, top5_err = [
-                (1.0 - x / preds.size(0)) * 100.0 for x in num_topks_correct
-            ]
+            if cfg.DETECTION.ENABLE:
+                if cfg.NUM_GPUS > 1:
+                    loss = du.all_reduce([loss])[0]
+                loss = loss.item()
 
-            # Gather all the predictions across all the devices.
-            if cfg.NUM_GPUS > 1:
-                loss, top1_err, top5_err = du.all_reduce(
-                    [loss, top1_err, top5_err]
+                train_meter.iter_toc()
+                # Update and log stats.
+                train_meter.update_stats(None, None, None, loss, lr)
+            else:
+                # Compute the errors.
+                num_topks_correct = metrics.topks_correct(preds, labels, (1, 5))
+                top1_err, top5_err = [
+                    (1.0 - x / preds.size(0)) * 100.0 for x in num_topks_correct
+                ]
+
+                # Gather all the predictions across all the devices.
+                if cfg.NUM_GPUS > 1:
+                    loss, top1_err, top5_err = du.all_reduce(
+                        [loss, top1_err, top5_err]
+                    )
+
+                # Copy the stats from GPU to CPU (sync point).
+                loss, top1_err, top5_err = (
+                    loss.item(),
+                    top1_err.item(),
+                    top5_err.item(),
                 )
 
-            # Copy the stats from GPU to CPU (sync point).
-            loss, top1_err, top5_err = (
-                loss.item(),
-                top1_err.item(),
-                top5_err.item(),
-            )
+                train_meter.iter_toc()
+                # Update and log stats.
+                train_meter.update_stats(
+                    top1_err, top5_err, loss, lr, inputs[0].size(0) * cfg.NUM_GPUS
+                )
 
-            train_meter.iter_toc()
-            # Update and log stats.
-            train_meter.update_stats(
-                top1_err, top5_err, loss, lr, inputs[0].size(0) * cfg.NUM_GPUS
-            )
+            train_meter.log_iter_stats(cur_epoch, cur_iter)
+            train_meter.iter_tic()
 
-        train_meter.log_iter_stats(cur_epoch, cur_iter)
-        train_meter.iter_tic()
-
-    # Log epoch stats.
-    train_meter.log_epoch_stats(cur_epoch)
-    train_meter.reset()
+            # Log epoch stats.
+            train_meter.log_epoch_stats(cur_epoch)
+            train_meter.reset()
 
 
 @torch.no_grad()
@@ -321,5 +323,5 @@ def train(cfg):
         if cu.is_checkpoint_epoch(cur_epoch, cfg.TRAIN.CHECKPOINT_PERIOD):
             cu.save_checkpoint(cfg.OUTPUT_DIR, model, optimizer, cur_epoch, cfg)
         # Evaluate the model on validation set.
-        if misc.is_eval_epoch(cfg, cur_epoch):
+        if misc.is_eval_epoch(cfg, cur_epoch) and not cfg.FCOS.ENABLE:
             eval_epoch(val_loader, model, val_meter, cur_epoch, cfg)

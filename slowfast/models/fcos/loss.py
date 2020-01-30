@@ -278,14 +278,14 @@ class FCOSLossComputation(object):
         box_regression_flatten = box_regression_flatten[pos_inds]
         reg_targets_flatten = reg_targets_flatten[pos_inds]
         centerness_flatten = centerness_flatten[pos_inds]
-
+        
         num_gpus = get_num_gpus()
         # sync num_pos from all gpus
         total_num_pos = reduce_sum(pos_inds.new_tensor([pos_inds.numel()])).item()
         num_pos_avg_per_gpu = max(total_num_pos / float(num_gpus), 1.0)
 
         class_target = torch.zeros_like(box_cls_flatten)
-        class_target[pos_inds, labels_flatten[pos_inds]] = 1
+        class_target[pos_inds, labels_flatten[pos_inds]-1] = 1
         
         cls_loss = sigmoid_focal_loss_jit(
             box_cls_flatten,

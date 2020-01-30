@@ -172,7 +172,7 @@ def make_fcos_postprocessor(config):
         nms_thresh=nms_thresh,
         fpn_post_nms_top_n=fpn_post_nms_top_n,
         min_size=0,
-        num_classes=config['FCOS']['NUM_CLASSES'],
+        num_classes=config['NUM_CLASSES'],
         bbox_aug_enabled=bbox_aug_enabled
     )
 
