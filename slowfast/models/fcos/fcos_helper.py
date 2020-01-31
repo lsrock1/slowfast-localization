@@ -186,6 +186,8 @@ class FCOSModule(torch.nn.Module):
             locations, box_cls, box_regression, 
             centerness, self.size
         )
+        
+        # return boxes, [cl.clone().detach() for cl in box_cls], {}
         return boxes, {}
 
     def compute_locations(self, features):

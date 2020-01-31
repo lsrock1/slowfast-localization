@@ -2,7 +2,7 @@ import torch
 
 from slowfast.structures.bounding_box import BoxList
 from slowfast.structures.boxlist_ops import cat_boxlist
-from slowfast.structures.boxlist_ops import boxlist_ml_nms
+from slowfast.structures.boxlist_ops import boxlist_nms
 from slowfast.structures.boxlist_ops import remove_small_boxes
 
 
@@ -142,7 +142,7 @@ class FCOSPostProcessor(torch.nn.Module):
         results = []
         for i in range(num_images):
             # multiclass nms
-            result = boxlist_ml_nms(boxlists[i], self.nms_thresh)
+            result = boxlist_nms(boxlists[i], self.nms_thresh)
             number_of_detections = len(result)
 
             # Limit to max_per_image detections **over all classes**
