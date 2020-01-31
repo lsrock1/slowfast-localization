@@ -135,10 +135,10 @@ class FCOSLossComputation(object):
 
     def prepare_targets(self, points, targets):
         object_sizes_of_interest = [
-            [-1, 40],
-            [40, 80],
-            [80, 160],
-            [160, INF]
+            [-1, 60],
+            [60, 120],
+            [120, 240],
+            [240, INF]
         ]
         expanded_object_sizes_of_interest = []
         for l, points_per_level in enumerate(points):
@@ -195,7 +195,6 @@ class FCOSLossComputation(object):
             r = bboxes[:, 2][None] - xs[:, None]
             b = bboxes[:, 3][None] - ys[:, None]
             reg_targets_per_im = torch.stack([l, t, r, b], dim=2)
-
             if self.center_sampling_radius > 0:
                 is_in_boxes = self.get_sample_region(
                     bboxes,

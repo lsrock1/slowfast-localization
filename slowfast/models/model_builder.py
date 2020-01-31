@@ -36,6 +36,7 @@ def build_model(cfg):
     cur_device = torch.cuda.current_device()
     # Transfer the model to the current GPU device
     model = model.cuda(device=cur_device)
+    model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
     # Use multi-process data parallel model in the multi-gpu setting
     if cfg.NUM_GPUS > 1:
         # Make model replica operate on the current device
