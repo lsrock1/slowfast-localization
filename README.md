@@ -1,5 +1,7 @@
 # PySlowFast
 
+This Project merges [SlowFast](https://github.com/facebookresearch/SlowFast) and one stage detector [FCOS](https://github.com/tianzhi0549/FCOS).
+
 PySlowFast is an open source video understanding codebase from FAIR that provides state-of-the-art video classification models, including papers "[SlowFast Networks for Video Recognition](https://arxiv.org/abs/1812.03982)", and "[Non-local Neural Networks](https://arxiv.org/abs/1711.07971)". 
 
 <div align="center">
