@@ -64,6 +64,7 @@ def random_short_side_scale_jitter_list(images, min_size, max_size, boxes=None):
         new_width = int(math.floor((float(width) / height) * size))
         if boxes is not None:
             boxes = [proposal * float(new_width) / width for proposal in boxes]
+
     return (
         [
             cv2.resize(
